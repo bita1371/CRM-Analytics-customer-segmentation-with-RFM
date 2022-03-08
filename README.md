@@ -1,23 +1,11 @@
 # CRM-Analytics-customer-segmentation-with-RFM
 An e-commerce company wants to segment its customers and determine marketing strategies according to these segments. For this, we will define the behavior of customers and create groups according to the clusters in these behaviors. In other words, we will take those who show common behaviors into the same groups and we will try to develop sales and marketing-specific techniques for them. for more info please read from my medium acccount: https://medium.com/@bitaazari71/crm-analytics-customer-segmentation-with-rfm-customer-lifetime-value-part-1-d1773c7c5cd9 
-############################################
-# PROJE: RFM ile Müşteri Segmentasyonu
-############################################
+
 
 
 ###############################################################
-# Veriyi Anlama ve Hazırlama
+# DATA PREPRATION
 ###############################################################
-
-# 1. Online Retail II excelindeki 2010-2011 verisini okuyunuz. Oluşturduğunuz dataframe’in kopyasını oluşturunuz.
-# 2. Veri setinin betimsel istatistiklerini inceleyiniz.
-# 3. Veri setinde eksik gözlem varmı? Varsa hangi değişkende kaç tane eksik gözlem vardır?
-# 4. Eksik gözlemleri veri setinden çıkartınız. Çıkarma işleminde ‘inplace=True’parametresini kullanınız.
-# 5. Eşsiz ürün sayısı kaçtır?
-# 6. Hangi üründen kaçar tane vardır?
-# 7. En çok sipariş edilen 5 ürünü çoktan aza doğru sıralayınız.
-# 8. Faturalardaki ‘C’ iptal edilen işlemleri göstermektedir. İptal edilen işlemleri veri setinden çıkartınız.
-# 9. Fatura başına elde edilen toplam kazancı ifade eden ‘TotalPrice’ adında bir değişken oluşturunuz.
 
 
 import datetime as dt
@@ -26,21 +14,21 @@ pd.set_option('display.max_columns', None)
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.float_format', lambda x: '%.5f' % x)
 
-# 1. Online Retail II excelindeki 2010-2011 verisini okuyunuz. Oluşturduğunuz dataframe’in kopyasını oluşturunuz.
+#READING DATA
 df_ = pd.read_excel(r"E:\bootcamp\03week\Ders_Öncesi_Notlar\online_retail_II.xlsx", sheet_name="Year 2010-2011")
 df = df_.copy()
 df.head()
 
-# 2. Veri setinin betimsel istatistiklerini inceleyiniz.
+# 2. DESCRIPTIVE STATISTIC
 df.describe([0.9,0.95,0.99]).T
 
-# 3. Veri setinde eksik gözlem varmı? Varsa hangi değişkende kaç tane eksik gözlem vardır?
+# 3. N OF MISSING VALUE
 df.isnull().sum()
 
-# 4. Eksik gözlemleri veri setinden çıkartınız. Çıkarma işleminde ‘inplace=True’parametresini kullanınız.
+# 4. REMOVE MISSING VALUE
 df.dropna(inplace=True)
 #df.dropna(subset=['name', 'born']) faqat jahaie k emikhaim drop kon df.dropna(thresh=2)
-# 5. Eşsiz ürün sayısı kaçtır?
+# 5. No OR UNIQUE VALUE IN DATASET
 df["Description"].nunique()
 df["StockCode"].nunique()
 
@@ -59,21 +47,21 @@ for code in list(pd.DataFrame(df["StockCode"].value_counts()).index[0:10]):
     print(code,"\n",df[df.StockCode==code]["Description"].value_counts(),"\n\n")
 
 
-# 6. Hangi üründen kaçar tane vardır?
+# 6. NUMBER OF PRODUCT
 df["Description"].value_counts().head()
 
-# 7. En çok sipariş edilen 5 ürünü çoktan aza doğru sıralayınız.
+# 7. CHECK THE MOST ORDERED PRODUCT
 df.groupby("Description").agg({"Quantity": "sum"}).sort_values("Quantity", ascending=False).head()
 
-# 8. Faturalardaki ‘C’ iptal edilen işlemleri göstermektedir. İptal edilen işlemleri veri setinden çıkartınız.
+# 8. WE ARE REMOVING INVOICES WHICH INCLUDE 'C'
 df = df[~df["Invoice"].str.contains("C", na=False)]
 
-# 9. Fatura başına elde edilen toplam kazancı ifade eden ‘TotalPrice’ adında bir değişken oluşturunuz.
+# 9.CALCULATE TOTAL PRICE
 df["TotalPrice"] = df["Quantity"] * df["Price"]
 df.head(20)
 df["TotalPrice"].max()
 ###############################################################
-#  RFM Metriklerinin Hesaplanması
+#  RFM CALCULATION
 ###############################################################
 
 
@@ -90,7 +78,7 @@ rfm = rfm[rfm["monetary"] > 0]
 
 
 ###############################################################
-# RFM Skorlarının Oluşturulması ve Tek Bir Değişkene Çevrilmesi
+# TURN RFM METRICS INTO LABEL FROM 1-5 WHITH QCUT
 ###############################################################
 
 rfm["recency_score"] = pd.qcut(rfm['recency'], 5, labels=[5, 4, 3, 2, 1])
@@ -102,10 +90,10 @@ rfm["RFM_SCORE"] = (rfm['recency_score'].astype(str) +
                     rfm['frequency_score'].astype(str))
 
 ###############################################################
-#  RFM Skorlarının Segment Olarak Tanımlanması
+#  MAKE SEGMENTATION WITH RFM SCORES
 ###############################################################
 
-# RFM isimlendirmesi
+# RFM SEGMENTATION MAP NAMES
 seg_map = {
     r'[1-2][1-2]': 'hibernating',
     r'[1-2][3-4]': 'at_Risk',
@@ -123,9 +111,7 @@ seg_map = {
 rfm['segment'] = rfm['RFM_SCORE'].replace(seg_map, regex=True)
 
 
-###############################################################
- Aksiyon zamanı!
-###############################################################
+#ANALYSIS AND EXPORT LOYAL CUSTOMER LIST 
 
 rfm[["segment", "recency", "frequency", "monetary"]].groupby("segment").agg(["mean", "count"])
 rfm[["recency", "frequency", "monetary", "segment"]].groupby("segment").agg(["mean","min","max","count"])
